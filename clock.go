@@ -1,19 +1,21 @@
 package rpgtools
 
+import "github.com/chadeldridge/clock/incrementers"
+
 type Clock struct {
-	UIncrementer
+	incrementers.UIncrementer
 }
 
 // NewClock creates a new clock with the given number of steps.
 func NewClock(steps int) Clock {
-	c := Clock{NewUIncrementer(steps)}
+	c := Clock{incrementers.NewUIncrementer(steps)}
 	c.IncrementBy(1)
 	return c
 }
 
 // NewClockWithTicks creates a new clock with the given number of steps and ticks.
 func NewClockWithTicks(steps, ticks int) Clock {
-	c := Clock{NewUIncrementerWithValue(steps, ticks)}
+	c := Clock{incrementers.NewUIncrementerWithValue(steps, ticks)}
 	c.IncrementBy(1)
 	return c
 }

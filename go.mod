@@ -1,4 +1,4 @@
-module github.com/chadeldridge/clock
+module github.com/chadeldridge/rpgtools
 
 go 1.22.3
 

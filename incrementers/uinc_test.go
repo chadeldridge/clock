@@ -1,4 +1,4 @@
-package rpgtools
+package incrementers
 
 import (
 	"testing"

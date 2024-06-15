@@ -1,8 +1,6 @@
-package rpgtools
+package incrementers
 
 import "fmt"
-
-const incrementer = 1
 
 // UIncrementer is a positive incrementer that can be incremented and decremented between 0 and max.
 // You can set the amount to increment by to a postive or negative value. Default is 1.

@@ -1,4 +1,4 @@
-package common
+package vectors
 
 func Clamp(v, min, max float64) float64 {
 	return ClampMax(ClampMin(v, min), max)

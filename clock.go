@@ -1,28 +1,67 @@
 package rpgtools
 
-import "github.com/chadeldridge/clock/incrementers"
+import (
+	"fmt"
 
-type Clock struct {
-	incrementers.UIncrementer
+	"github.com/chadeldridge/rpgtools/incrementers"
+)
+
+type Clock interface {
+	Min() int
+	Max() int
+	Value() int
+	Inc() int
+	Original() int
+
+	IsFull() bool
+	IsEmpty() bool
+	IsMin() bool
+
+	Advance()
+	Increment()
+	Decrement()
+	Add(int)
+	Remove(int)
+
+	SetMax(int)
+	SetValue(int)
+
+	Fill()
+	Empty()
+	Reset()
+
+	String() string
+	MarshalJSON() ([]byte, error)
 }
 
-// NewClock creates a new clock with the given number of steps.
+// NewClock creates a new clock with from 0 to the maximum value of steps.
 func NewClock(steps int) Clock {
-	c := Clock{incrementers.NewUIncrementer(steps)}
-	c.IncrementBy(1)
-	return c
+	i := incrementers.NewIncrementer(0, steps)
+	i.IncrementBy(1)
+	return &i
 }
 
-// NewClockWithTicks creates a new clock with the given number of steps and ticks.
+// NewClockWithTicks creates a new clock from 0 to the maximum steps, with a starting value of ticks.
 func NewClockWithTicks(steps, ticks int) Clock {
-	c := Clock{incrementers.NewUIncrementerWithValue(steps, ticks)}
-	c.IncrementBy(1)
-	return c
+	i := incrementers.NewIncrementerWithValue(0, steps, ticks)
+	i.IncrementBy(1)
+	return &i
 }
 
 // NewClockFromJSON creates a new clock from a JSON representation.
 func NewClockFromJSON(data []byte) (Clock, error) {
-	var c Clock
-	err := c.UnmarshalJSON(data)
-	return c, err
+	var i incrementers.Incrementer
+	if err := i.UnmarshalJSON(data); err != nil {
+		return nil, err
+	}
+
+	if i.Min() != 0 {
+		return nil, fmt.Errorf("invalid Clock: min must be 0")
+	}
+
+	if i.Inc() != 1 {
+		return nil, fmt.Errorf("invalid Clock: inc must be 1")
+	}
+
+	return &i, nil
 }

@@ -7,18 +7,28 @@ import (
 // Incrementer is a positive incrementer that can be incremented and decremented between 0 and max.
 // You can set the amount to increment by to a postive or negative value. Default is 1.
 type Incrementer struct {
-	min  int
-	max  int
-	val  int
-	inc  int
-	orig int // Original value when Incrementer was created.
+	noMin bool
+	noMax bool
+	min   int
+	max   int
+	val   int
+	inc   int
+	orig  int // Original value when Incrementer was created.
 }
 
 // New creates a new Incrementer with the given number of max.
-func NewIncrementer(min, max int) Incrementer { return Incrementer{min: min, max: max, inc: 1} }
+func NewIncrementer() Incrementer { return Incrementer{noMin: true, noMax: true, inc: 1} }
+
+// NewClamped creates a new Incrementer with a minumum and maximum value.
+func NewIncrementerClamped(min, max int) Incrementer { return Incrementer{min: min, max: max, inc: 1} }
 
 // NewWithValue creates a new Incrementer with the given number of max and val.
-func NewIncrementerWithValue(min, max, val int) Incrementer {
+func NewIncrementerWithValue(val int) Incrementer {
+	return Incrementer{noMin: true, noMax: true, val: val, inc: 1, orig: val}
+}
+
+// NewWithValue creates a new Incrementer with the given number of max and val.
+func NewIncrementerClampedWithValue(min, max, val int) Incrementer {
 	return Incrementer{min: min, max: max, val: val, inc: 1, orig: val}
 }
 
@@ -28,6 +38,12 @@ func NewIncrementerFromJSON(data []byte) (Incrementer, error) {
 	err := i.UnmarshalJSON(data)
 	return i, err
 }
+
+// AllowsMin returns true if the Incrementer allows a minimum value.
+func (i Incrementer) AllowsMin() bool { return i.noMin }
+
+// AllowsMax returns true if the Incrementer allows a maximum value.
+func (i Incrementer) AllowsMax() bool { return i.noMax }
 
 // Min returns the min size of the Incrementer.
 func (i Incrementer) Min() int { return i.min }
@@ -73,6 +89,12 @@ func (i *Incrementer) Add(val int) { i.val = Clamp(i.val+val, i.min, i.max) }
 // Remove decrements the Incrementer by the given number of val.
 func (i *Incrementer) Remove(val int) { i.val = Clamp(i.val-val, i.min, i.max) }
 
+// SetNoMin sets the Incrementer to allow a minimum value.
+func (i *Incrementer) SetNoMin(noMin bool) { i.noMin = noMin }
+
+// SetNoMax sets the Incrementer to allow a maximum value.
+func (i *Incrementer) SetNoMax(noMax bool) { i.noMax = noMax }
+
 // SetMin sets the minimum size of the Incrementer to the given number of min.
 func (i *Incrementer) SetMin(min int) {
 	if min >= i.max {
@@ -80,7 +102,9 @@ func (i *Incrementer) SetMin(min int) {
 	}
 
 	i.min = min
-	i.val = ClampMin(i.val, i.min)
+	if !i.noMin {
+		i.val = ClampMin(i.val, i.min)
+	}
 }
 
 // SetMax sets the maximum size of the Incrementer to the given number of max.
@@ -90,24 +114,43 @@ func (i *Incrementer) SetMax(max int) {
 	}
 
 	i.max = max
-	i.val = ClampMax(i.val, i.max)
+	if !i.noMax {
+		i.val = ClampMax(i.val, i.max)
+	}
 }
 
 // SetValue tries to set the Incrementer value to the given number of val. The value will be clamped.
-func (i *Incrementer) SetValue(val int) { i.val = Clamp(val, i.min, i.max) }
+func (i *Incrementer) SetValue(val int) { i.val = val; i.Clamp() }
 
 // SetIncrementer sets the number the Incrementer will increment by to the given number of inc.
 func (i *Incrementer) SetIncrementer(inc int) { i.inc = inc }
 
 // SetOriginalValue changes the Incrementer's original value to the given number of val.
 // The value will be clamped.
-func (i *Incrementer) SetOriginalValue(val int) { i.orig = Clamp(val, i.min, i.max) }
+func (i *Incrementer) SetOriginalValue(val int) { i.orig = val }
+
+// Clamp clamps the Incrementer value to the current minimum and maximum value.
+func (i *Incrementer) Clamp() {
+	if !i.noMin {
+		i.val = ClampMin(i.val, i.min)
+	}
+
+	if !i.noMax {
+		i.val = ClampMax(i.val, i.max)
+	}
+}
+
+// ClampMin clamps the Incrementer value to the minimum value.
+func (i *Incrementer) ClampMin() { i.val = ClampMin(i.val, i.min) }
+
+// ClampMax clamps the Incrementer value to the maximum value.
+func (i *Incrementer) ClampMax() { i.val = ClampMax(i.val, i.max) }
 
 // Fill sets the Incrementer value to the maximum size.
 func (i *Incrementer) Fill() { i.val = i.max }
 
 // Empty tries to sets the Incrementer value to 0. The value will be clamped.
-func (i *Incrementer) Empty() { i.val = Clamp(0, i.min, i.max) }
+func (i *Incrementer) Empty() { i.val = 0; i.Clamp() }
 
 // Floor sets the Incrementer to the minimum size.
 func (i *Incrementer) Floor() { i.val = i.min }
@@ -115,11 +158,15 @@ func (i *Incrementer) Floor() { i.val = i.min }
 // Reset sets the Incrementer to 0.
 func (i *Incrementer) Reset() {
 	i.val = i.orig
-	i.val = Clamp(i.val, i.min, i.max)
+	i.Clamp()
 }
 
 // String returns a string representation of the Incrementer.
 func (i Incrementer) String() string {
+	if i.noMax {
+		return fmt.Sprintf("%d", i.val)
+	}
+
 	return fmt.Sprintf("%d/%d", i.val, i.max)
 }
 
@@ -127,8 +174,8 @@ func (i Incrementer) String() string {
 func (i Incrementer) MarshalJSON() ([]byte, error) {
 	return []byte(
 			fmt.Sprintf(
-				`{"min":%d,"max":%d,"val":%d,"inc":%d,"orig":%d}`,
-				i.min, i.max, i.val, i.inc, i.orig,
+				`{"nomin":%t,"nomax":%t,"min":%d,"max":%d,"val":%d,"inc":%d,"orig":%d}`,
+				i.noMin, i.noMax, i.min, i.max, i.val, i.inc, i.orig,
 			),
 		),
 		nil
@@ -136,11 +183,12 @@ func (i Incrementer) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON parses a JSON representation of the Incrementer.
 func (i *Incrementer) UnmarshalJSON(data []byte) error {
+	var noMin, noMax bool
 	var min, max, val, inc, o int
 	if _, err := fmt.Sscanf(
 		string(data),
-		`{"min":%d,"max":%d,"val":%d,"inc":%d,"orig":%d}`,
-		&min, &max, &val, &inc, &o,
+		`{"nomin":%t,"nomax":%t,"min":%d,"max":%d,"val":%d,"inc":%d,"orig":%d}`,
+		&noMin, &noMax, &min, &max, &val, &inc, &o,
 	); err != nil {
 		return err
 	}
@@ -149,14 +197,16 @@ func (i *Incrementer) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("invalid Incrementer: max must be greater than min")
 	}
 
-	if val < min {
+	if !noMin && val < min {
 		return fmt.Errorf("invalid Incrementer: val must be greater than or equal to min")
 	}
 
-	if val > max {
+	if !noMax && val > max {
 		return fmt.Errorf("invalid Incrementer: val must be less than or equal to max")
 	}
 
+	i.noMin = noMin
+	i.noMax = noMax
 	i.min = min
 	i.max = max
 	i.val = val

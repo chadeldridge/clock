@@ -8,25 +8,21 @@ import (
 
 func TestIncrementerNewIncrementer(t *testing.T) {
 	require := require.New(t)
-	i := NewIncrementer(0, 4)
+	i := NewIncrementer()
 
-	require.Equal(0, i.min)
-	require.Equal(4, i.max)
 	require.Equal(0, i.val)
 }
 
 func TestIncrementerNewIncrementerWithValue(t *testing.T) {
 	require := require.New(t)
-	i := NewIncrementerWithValue(0, 4, 3)
+	i := NewIncrementerWithValue(3)
 
-	require.Equal(0, i.min)
-	require.Equal(4, i.max)
 	require.Equal(3, i.val)
 }
 
 func TestIncrementerNewIncrementerFromJSON(t *testing.T) {
 	require := require.New(t)
-	i, err := NewIncrementerFromJSON([]byte(`{"min":0,"max":4,"val":3,"inc":1,"orig":0}`))
+	i, err := NewIncrementerFromJSON([]byte(`{"nomin":true,"nomax":true,"min":0,"max":4,"val":3,"inc":1,"orig":0}`))
 
 	require.NoError(err, "Incrementer.NewFromJSON() returned an error: %s", err)
 	require.Equal(0, i.min)
@@ -75,7 +71,7 @@ func TestIncrementerMax(t *testing.T) {
 
 func TestIncrementerValue(t *testing.T) {
 	require := require.New(t)
-	i := Incrementer{max: 4}
+	i := Incrementer{noMin: true, noMax: true, max: 4}
 
 	t.Run("default", func(t *testing.T) {
 		require.Equal(0, i.Value())
@@ -94,7 +90,7 @@ func TestIncrementerValue(t *testing.T) {
 
 func TestIncrementerIncrementer(t *testing.T) {
 	require := require.New(t)
-	i := Incrementer{max: 4}
+	i := Incrementer{noMin: true, noMax: true, max: 4}
 
 	t.Run("default", func(t *testing.T) {
 		require.Equal(0, i.Inc())
@@ -113,7 +109,7 @@ func TestIncrementerIncrementer(t *testing.T) {
 
 func TestIncrementerOriginal(t *testing.T) {
 	require := require.New(t)
-	i := Incrementer{max: 4}
+	i := Incrementer{noMin: true, noMax: true, max: 4}
 
 	t.Run("default", func(t *testing.T) {
 		require.Equal(0, i.Original())
@@ -423,16 +419,6 @@ func TestIncrementerSetOriginalValue(t *testing.T) {
 		i.SetOriginalValue(3)
 		require.Equal(3, i.orig)
 	})
-
-	t.Run("too low", func(t *testing.T) {
-		i.SetOriginalValue(-5)
-		require.Equal(-4, i.orig)
-	})
-
-	t.Run("too high", func(t *testing.T) {
-		i.SetOriginalValue(6)
-		require.Equal(4, i.orig)
-	})
 }
 
 func TestIncrementerFill(t *testing.T) {
@@ -489,15 +475,15 @@ func TestIncrementerMarshalJSON(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		data, err := i.MarshalJSON()
 		require.NoError(err, "Incrementer.MarshalJSON() returned an error: %s", err)
-		require.Equal(`{"min":0,"max":4,"val":0,"inc":0,"orig":0}`, string(data))
+		require.Equal(`{"nomin":false,"nomax":false,"min":0,"max":4,"val":0,"inc":0,"orig":0}`, string(data))
 	})
 
 	t.Run("all set", func(t *testing.T) {
-		i = Incrementer{min: -4, max: 4, val: 3, inc: 1, orig: 2}
+		i = Incrementer{noMin: true, noMax: true, min: -4, max: 4, val: 3, inc: 1, orig: 2}
 		i.val = 3
 		data, err := i.MarshalJSON()
 		require.NoError(err, "Incrementer.MarshalJSON() returned an error: %s", err)
-		require.Equal(`{"min":-4,"max":4,"val":3,"inc":1,"orig":2}`, string(data))
+		require.Equal(`{"nomin":true,"nomax":true,"min":-4,"max":4,"val":3,"inc":1,"orig":2}`, string(data))
 	})
 }
 
@@ -506,31 +492,31 @@ func TestIncrementerUnmarshalJSON(t *testing.T) {
 	i := Incrementer{}
 
 	t.Run("scan error", func(t *testing.T) {
-		err := i.UnmarshalJSON([]byte(`{"max":4,"val":0,"inc":0}`))
+		err := i.UnmarshalJSON([]byte(`{"nomin":false,"nomax":false,"max":4,"val":0,"inc":0}`))
 		require.Error(err, "Incrementer.UnmarshalJSON() did not return an error")
 		require.Equal("input does not match format", err.Error())
 	})
 
 	t.Run("invalid max", func(t *testing.T) {
-		err := i.UnmarshalJSON([]byte(`{"min":0,"max":0,"val":0,"inc":0,"orig":0}`))
+		err := i.UnmarshalJSON([]byte(`{"nomin":false,"nomax":false,"min":0,"max":0,"val":0,"inc":0,"orig":0}`))
 		require.Error(err, "Incrementer.UnmarshalJSON() did not return an error")
 		require.Equal("invalid Incrementer: max must be greater than min", err.Error())
 	})
 
 	t.Run("higher val", func(t *testing.T) {
-		err := i.UnmarshalJSON([]byte(`{"min":0,"max":4,"val":5,"inc":1,"orig":1}`))
+		err := i.UnmarshalJSON([]byte(`{"nomin":false,"nomax":false,"min":0,"max":4,"val":5,"inc":1,"orig":1}`))
 		require.Error(err, "Incrementer.UnmarshalJSON() did not return an error")
 		require.Equal("invalid Incrementer: val must be less than or equal to max", err.Error())
 	})
 
 	t.Run("lower val", func(t *testing.T) {
-		err := i.UnmarshalJSON([]byte(`{"min":0,"max":4,"val":-1,"inc":1,"orig":1}`))
+		err := i.UnmarshalJSON([]byte(`{"nomin":false,"nomax":false,"min":0,"max":4,"val":-1,"inc":1,"orig":1}`))
 		require.Error(err, "Incrementer.UnmarshalJSON() did not return an error")
 		require.Equal("invalid Incrementer: val must be greater than or equal to min", err.Error())
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		err := i.UnmarshalJSON([]byte(`{"min":-4,"max":4,"val":3,"inc":1,"orig":1}`))
+		err := i.UnmarshalJSON([]byte(`{"nomin":false,"nomax":false,"min":-4,"max":4,"val":3,"inc":1,"orig":1}`))
 		require.NoError(err, "Incrementer.UnmarshalJSON() returned an error: %s", err)
 		require.Equal(-4, i.min)
 		require.Equal(4, i.max)

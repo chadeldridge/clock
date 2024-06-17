@@ -7,15 +7,12 @@ import (
 )
 
 type Clock interface {
-	Min() int
 	Max() int
 	Value() int
-	Inc() int
 	Original() int
 
 	IsFull() bool
 	IsEmpty() bool
-	IsMin() bool
 
 	Advance()
 	Increment()
@@ -36,14 +33,14 @@ type Clock interface {
 
 // NewClock creates a new clock with from 0 to the maximum value of steps.
 func NewClock(steps int) Clock {
-	i := incrementers.NewIncrementer(0, steps)
+	i := incrementers.NewIncrementerClamped(0, steps)
 	i.IncrementBy(1)
 	return &i
 }
 
 // NewClockWithTicks creates a new clock from 0 to the maximum steps, with a starting value of ticks.
 func NewClockWithTicks(steps, ticks int) Clock {
-	i := incrementers.NewIncrementerWithValue(0, steps, ticks)
+	i := incrementers.NewIncrementerClampedWithValue(0, steps, ticks)
 	i.IncrementBy(1)
 	return &i
 }
@@ -62,6 +59,9 @@ func NewClockFromJSON(data []byte) (Clock, error) {
 	if i.Inc() != 1 {
 		return nil, fmt.Errorf("invalid Clock: inc must be 1")
 	}
+
+	i.SetNoMin(false)
+	i.SetNoMax(false)
 
 	return &i, nil
 }

@@ -1,4 +1,4 @@
-package rpgtools
+package incrementers
 
 import (
 	"testing"
@@ -26,29 +26,33 @@ func TestClockNewFromJSON(t *testing.T) {
 	require := require.New(t)
 
 	t.Run("valid", func(t *testing.T) {
-		c, err := NewClockFromJSON([]byte(`{"nomin":false,"nomax":false,"min":0,"max":4,"val":3,"inc":1,"orig":0}`))
-		require.NoError(err, "NewClockFromJSON() returned an error: %s", err)
-		require.Equal(4, c.Max())
-		require.Equal(3, c.Value())
-		require.Equal(0, c.Original())
+		c, err := NewClockFromJSON([]byte(`{"min":0,"max":4,"incrementer":{"inc":1,"val":2,"orig":3}}`))
+		require.NoError(err, "Clock.NewFromJSON() returned an error: %s", err)
+		require.Equal(2, c.Value())
+		require.Equal(3, c.Original())
 	})
 
-	t.Run("invalid", func(t *testing.T) {
-		// Set min to a string to force an error.
-		_, err := NewClockFromJSON([]byte(`{"nomin":false,"nomax":false,"min":b,"max":4,"val":3,"inc":1,"orig":0}`))
-		require.Error(err, "NewClockFromJSON() did not return an error: %s", err)
+	t.Run("invalid incrementer", func(t *testing.T) {
+		_, err := NewClockFromJSON([]byte(`{"min":0,"max":0,"incrementer":{"inc":b,"val":2,"orig":3}}`))
+		require.Error(err, "Clock.NewFromJSON() did not return an error")
 		require.Equal("expected integer", err.Error())
 	})
 
 	t.Run("invalid min", func(t *testing.T) {
-		_, err := NewClockFromJSON([]byte(`{"nomin":false,"nomax":false,"min":-4,"max":4,"val":3,"inc":1,"orig":0}`))
-		require.Error(err, "NewClockFromJSON() did not return an error: %s", err)
+		_, err := NewClockFromJSON([]byte(`{"min":-4,"max":0,"incrementer":{"inc":1,"val":2,"orig":3}}`))
+		require.Error(err, "Clock.NewFromJSON() did not return an error")
 		require.Equal("invalid Clock: min must be 0", err.Error())
 	})
 
+	t.Run("invalid max", func(t *testing.T) {
+		_, err := NewClockFromJSON([]byte(`{"min":0,"max":0,"incrementer":{"inc":1,"val":2,"orig":3}}`))
+		require.Error(err, "Clock.NewFromJSON() did not return an error")
+		require.Equal("invalid Clock: max must be greater than 0", err.Error())
+	})
+
 	t.Run("invalid inc", func(t *testing.T) {
-		_, err := NewClockFromJSON([]byte(`{"nomin":false,"nomax":false,"min":0,"max":4,"val":3,"inc":2,"orig":0}`))
-		require.Error(err, "NewClockFromJSON() did not return an error: %s", err)
+		_, err := NewClockFromJSON([]byte(`{"min":0,"max":4,"incrementer":{"inc":4,"val":2,"orig":3}}`))
+		require.Error(err, "Clock.NewFromJSON() did not return an error")
 		require.Equal("invalid Clock: inc must be 1", err.Error())
 	})
 }
